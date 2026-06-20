@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import {
   LogOut, Phone, MapPin, Clock, MessageSquare, CheckCircle,
-  AlertCircle, Calendar, RefreshCw, Search, X, Bell,
+  Calendar, RefreshCw, Search, X, Bell,
   Shield, Send, ChevronRight, Zap, PhoneCall, PhoneMissed,
   PhoneOff, Star, TrendingUp, FileText, Target, ChevronDown,
   ChevronUp, Info, BarChart2, Activity
@@ -81,13 +81,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   medium: 'text-amber-400 bg-amber-500/10 border border-amber-500/20',
   low: 'text-green-400 bg-green-500/10 border border-green-500/20',
 };
-const ROLE_COLORS: Record<string, string> = {
-  telecaller: 'text-sky-400 bg-sky-500/10',
-  marketing_executive: 'text-amber-400 bg-amber-500/10',
-  manager: 'text-orange-400 bg-orange-500/10',
-  hr: 'text-rose-400 bg-rose-500/10',
-  admin: 'text-slate-300 bg-slate-500/10',
-};
+const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 function formatDT(val: string | null | undefined) {
   if (!val) return '—';
@@ -157,7 +151,6 @@ export default function TelecallerPortal() {
     return d.toDateString() === today.toDateString();
   }), [leads]);
 
-  const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const filtered = useMemo(() => leads
     .filter(l => {
       const matchStatus = statusFilter === 'all' || l.status === statusFilter;
@@ -181,10 +174,11 @@ export default function TelecallerPortal() {
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
+      if (!user?.id) return;
       const { data } = await supabase
         .from('marketing_leads')
         .select('*')
-        .eq('assigned_to', user?.id)
+        .eq('assigned_to', user.id)
         .order('created_at', { ascending: false });
       setLeads((data || []) as Lead[]);
     } finally {
@@ -494,7 +488,7 @@ export default function TelecallerPortal() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="text-white font-semibold text-sm">{lead.full_name}</h3>
                               {lead.priority === 'high' && <Star className="w-3.5 h-3.5 text-red-400 fill-red-400" />}
-                              {lead.invoice_number && <FileText className="w-3.5 h-3.5 text-teal-400" title="Has invoice" />}
+                              {lead.invoice_number && <span title="Has invoice"><FileText className="w-3.5 h-3.5 text-teal-400" /></span>}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <Phone className="w-3 h-3 text-amber-500" />

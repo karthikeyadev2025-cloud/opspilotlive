@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  Users, TrendingUp, Phone, UserCheck, AlertCircle,
+  Users, TrendingUp, AlertCircle,
   ArrowUp, Clock, CheckCircle, BarChart2, Activity,
   Calendar, RefreshCw, X
 } from 'lucide-react';
@@ -53,9 +53,7 @@ export default function DashboardOverview() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => { loadStats(); }, [dateFrom, dateTo]);
-
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
     setLoading(true);
 
     let leadsQuery = supabase.from('marketing_leads').select('status, requirement, callback_date, assigned_to, created_at');
@@ -106,7 +104,9 @@ export default function DashboardOverview() {
     });
     setLastRefresh(new Date());
     setLoading(false);
-  }
+  }, [dateFrom, dateTo]);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   if (loading) {
     return (

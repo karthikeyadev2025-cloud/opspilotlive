@@ -86,12 +86,6 @@ export default function ExecutivePortal() {
   const [error, setError] = useState('');
   const [myLeads, setMyLeads] = useState<any[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<any | null>(null);
-  const [leadRemarks, setLeadRemarks] = useState<LeadRemark[]>([]);
-  const [remarksLoading, setRemarksLoading] = useState(false);
-  const [newRemark, setNewRemark] = useState('');
-  const [newCallType, setNewCallType] = useState('executive_visit');
-  const [sendingRemark, setSendingRemark] = useState(false);
 
   // Inline expand for my_leads
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -333,39 +327,6 @@ export default function ExecutivePortal() {
     setSubmitting(false);
     if (dbError) { setError('Failed to submit. Please try again.'); return; }
     setSubmitted(true);
-  }
-
-  async function openLeadDetail(lead: any) {
-    setSelectedLead(lead);
-    setNewRemark('');
-    setNewCallType('executive_visit');
-    setRemarksLoading(true);
-    try {
-      const { data } = await supabase.from('lead_remarks').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
-      setLeadRemarks(data || []);
-    } finally {
-      setRemarksLoading(false);
-    }
-  }
-
-  async function sendRemark() {
-    if (!newRemark.trim() || !selectedLead || !user) return;
-    setSendingRemark(true);
-    try {
-      await supabase.from('lead_remarks').insert({
-        lead_id: selectedLead.id,
-        user_id: user.id,
-        user_name: user.full_name,
-        user_role: user.role,
-        remark: newRemark.trim(),
-        call_type: newCallType,
-      });
-      const { data } = await supabase.from('lead_remarks').select('*').eq('lead_id', selectedLead.id).order('created_at', { ascending: false });
-      setLeadRemarks(data || []);
-      setNewRemark('');
-    } finally {
-      setSendingRemark(false);
-    }
   }
 
   async function sendConvRemark() {
@@ -1002,119 +963,6 @@ export default function ExecutivePortal() {
           ))}
         </div>
       </nav>
-
-      {selectedLead && (
-        <div className="fixed inset-0 bg-black/85 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-white font-bold">{selectedLead.full_name}</h3>
-                <p className="text-amber-400 text-sm">{selectedLead.contact_number}</p>
-              </div>
-              <button onClick={() => setSelectedLead(null)} className="p-2 hover:bg-slate-800 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {[
-                  { l: 'Location', v: selectedLead.location },
-                  { l: 'Requirement', v: selectedLead.requirement },
-                  { l: 'Status', v: STATUS_LABELS[selectedLead.status] || selectedLead.status },
-                  { l: 'Priority', v: selectedLead.priority },
-                ].map(f => (
-                  <div key={f.l} className="bg-slate-800/60 rounded-xl p-3">
-                    <p className="text-xs text-slate-500 mb-0.5">{f.l}</p>
-                    <p className="text-white">{f.v}</p>
-                  </div>
-                ))}
-              </div>
-
-              {selectedLead.lead_photo_url && (
-                <img src={selectedLead.lead_photo_url} alt="Lead" className="w-full rounded-xl object-cover max-h-48 border border-slate-700" />
-              )}
-
-              <div className="border border-slate-700/60 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-slate-800/40 border-b border-slate-700/60 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-amber-500" />
-                    <span className="text-white text-sm font-semibold">Conversation Log</span>
-                  </div>
-                  <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">{leadRemarks.length} entries</span>
-                </div>
-                <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
-                  {remarksLoading ? (
-                    <div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" /></div>
-                  ) : leadRemarks.length === 0 ? (
-                    <p className="text-slate-600 text-xs text-center py-4">No conversation entries yet</p>
-                  ) : leadRemarks.map((r, idx) => {
-                    const meta = CALL_TYPE_META[r.call_type] || CALL_TYPE_META.general;
-                    const dt = new Date(r.created_at);
-                    const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-                    const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-                    return (
-                      <div key={r.id} className="relative pl-8">
-                        {idx < leadRemarks.length - 1 && <div className="absolute left-3 top-6 bottom-0 w-px bg-slate-700/60" />}
-                        <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
-                          {(r.user_name || '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
-                          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                            <span className="text-white text-xs font-semibold">{r.user_name}</span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${ROLE_COLORS[r.user_role] || 'text-slate-400 bg-slate-700'}`}>
-                              {r.user_role.replace(/_/g, ' ')}
-                            </span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium border ${meta.bg} ${meta.color}`}>
-                              {meta.label}
-                            </span>
-                            <span className="text-slate-500 text-xs ml-auto shrink-0">
-                              {dateStr} · {timeStr}
-                            </span>
-                          </div>
-                          <p className="text-slate-300 text-sm leading-relaxed">{r.remark}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="p-3 border-t border-slate-700/60 bg-slate-800/20 space-y-2">
-                  <div className="flex gap-2">
-                    {EXEC_CALL_TYPE_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setNewCallType(opt.value)}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                          newCallType === opt.value
-                            ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
-                            : 'border-slate-700 bg-slate-800/60 text-slate-500 hover:text-slate-300'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <textarea
-                      value={newRemark}
-                      onChange={e => setNewRemark(e.target.value)}
-                      placeholder={newCallType === 'executive_visit' ? 'Log your field visit or client meeting notes...' : 'Add a general note...'}
-                      rows={2}
-                      className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 text-sm resize-none"
-                    />
-                    <button
-                      onClick={sendRemark}
-                      disabled={!newRemark.trim() || sendingRemark}
-                      className="p-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-colors disabled:opacity-40 self-end"
-                    >
-                      {sendingRemark ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showCamera && (
         <CameraCapture

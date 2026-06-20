@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  Shield, LogIn, LogOut, AlertTriangle, RefreshCw, Search,
-  Monitor, Smartphone, Tablet, Clock, User, Filter, Eye,
+  Shield, LogOut, RefreshCw, Search,
+  Monitor, Smartphone, Tablet, Clock, Eye,
   X, Download, ChevronDown, CheckCircle, XCircle, Ban
 } from 'lucide-react';
 
@@ -64,6 +64,11 @@ function DeviceIcon({ device }: { device: string }) {
   return <Monitor className="w-3.5 h-3.5 text-slate-400" />;
 }
 
+function escapeCsv(val: string | number | null | undefined): string {
+  if (val === null || val === undefined) return '';
+  return `"${String(val).replace(/"/g, '""')}"`;
+}
+
 export default function SecurityLogs() {
   const [activeTab, setActiveTab] = useState<'logins' | 'data_access'>('logins');
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
@@ -116,6 +121,32 @@ export default function SecurityLogs() {
     !search || l.user_email.toLowerCase().includes(search.toLowerCase()) || l.action.toLowerCase().includes(search.toLowerCase())
   );
 
+  function exportLogs() {
+    let headers: string[];
+    let rows: string[];
+    if (activeTab === 'logins') {
+      headers = ['Date/Time', 'Email', 'Full Name', 'Role', 'Event', 'Device', 'Location', 'Failure Reason'];
+      rows = filteredLogins.map(l => [
+        escapeCsv(formatTime(l.created_at)), escapeCsv(l.email), escapeCsv(l.full_name), escapeCsv(l.role),
+        escapeCsv(EVENT_CONFIG[l.event_type]?.label || l.event_type), escapeCsv(l.device_info),
+        escapeCsv(l.location_hint), escapeCsv(l.failure_reason),
+      ].join(','));
+    } else {
+      headers = ['Date/Time', 'User Email', 'Role', 'Action', 'Table', 'Record Count', 'Filters', 'Notes'];
+      rows = filteredData.map(l => [
+        escapeCsv(formatTime(l.created_at)), escapeCsv(l.user_email), escapeCsv(l.user_role),
+        escapeCsv(l.action), escapeCsv(l.table_name), escapeCsv(l.record_count),
+        escapeCsv(l.filters_applied), escapeCsv(l.notes),
+      ].join(','));
+    }
+    const csv = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `security_${activeTab}_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function formatTime(iso: string) {
     return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   }
@@ -140,9 +171,14 @@ export default function SecurityLogs() {
             <p className="text-slate-500 text-xs">Monitor all logins, logouts, and data access</p>
           </div>
         </div>
-        <button onClick={loadLogs} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm transition-colors">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportLogs} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm transition-colors">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={loadLogs} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm transition-colors">
+            <RefreshCw className="w-4 h-4" /> Refresh
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

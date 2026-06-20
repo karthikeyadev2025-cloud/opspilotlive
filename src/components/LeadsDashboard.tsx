@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  TrendingUp, TrendingDown, Users, Target, CheckCircle,
-  RefreshCw, Calendar, X, BarChart2, Activity, ChevronUp, ChevronDown
+  TrendingUp, Users, Target, CheckCircle,
+  RefreshCw, Calendar, BarChart2, Activity, ChevronUp, ChevronDown
 } from 'lucide-react';
 
 interface DailyPoint {
@@ -23,10 +23,6 @@ interface ExecutiveStat {
   converted: number;
   interested: number;
   today: number;
-}
-
-interface Props {
-  isAdmin?: boolean;
 }
 
 const STATUS_COLOR_MAP: Record<string, string> = {
@@ -225,7 +221,7 @@ function ExecutiveChart({ executives }: { executives: ExecutiveStat[] }) {
   );
 }
 
-export default function LeadsDashboard({ isAdmin = false }: Props) {
+export default function LeadsDashboard() {
   const [dailyData, setDailyData] = useState<DailyPoint[]>([]);
   const [executives, setExecutives] = useState<ExecutiveStat[]>([]);
   const [loading, setLoading] = useState(true);

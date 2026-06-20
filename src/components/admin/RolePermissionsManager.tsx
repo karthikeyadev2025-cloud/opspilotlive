@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Shield, Plus, X, Save, RefreshCw, AlertCircle, CheckCircle, Trash2, Pencil, Eye, Users, ToggleLeft, ToggleRight, Lock, Unlock } from 'lucide-react';
+import { Shield, Plus, X, Save, RefreshCw, AlertCircle, CheckCircle, Trash2, Pencil, Eye, ToggleLeft, ToggleRight, Lock, Unlock } from 'lucide-react';
 
 interface Permission {
   can_view_leads: boolean;
@@ -134,7 +134,7 @@ export default function RolePermissionsManager() {
   async function loadRoles() {
     setLoading(true);
     const { data } = await supabase.from('role_permissions').select('*').order('created_at', { ascending: false });
-    setRoles(data || []);
+    setRoles((data || []) as unknown as RolePermission[]);
     setLoading(false);
   }
 
@@ -350,7 +350,7 @@ export default function RolePermissionsManager() {
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Permissions</label>
                   <div className="flex gap-2">
-                    <button onClick={() => setForm(p => ({ ...p, permissions: Object.fromEntries(Object.keys(defaultPermissions).map(k => [k, true])) as Permission }))}
+                    <button onClick={() => setForm(p => ({ ...p, permissions: Object.fromEntries(Object.keys(defaultPermissions).map(k => [k, true])) as unknown as Permission }))}
                       className="px-2.5 py-1 bg-green-500/20 text-green-400 text-xs rounded-lg hover:bg-green-500/30 transition-colors">
                       Enable All
                     </button>

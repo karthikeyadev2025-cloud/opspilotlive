@@ -179,7 +179,7 @@ export default function ThemeManager() {
     setLoading(true);
     const { data } = await supabase.from('platform_theme').select('*').eq('id', 'default').maybeSingle();
     if (data) {
-      const { id, updated_at, ...rest } = data;
+      const rest: Omit<Theme, 'id' | 'updated_at'> = { ...data };
       setTheme(rest);
       setLastSaved(data.updated_at ? new Date(data.updated_at).toLocaleString('en-IN') : '');
       applyThemeToDOM(rest);

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  Activity, LogOut, Users, CreditCard, Clock, CheckCircle,
-  AlertTriangle, Crown, Zap, ArrowRight, Building2,
+  Activity, LogOut, Users, Clock, CheckCircle,
+  AlertTriangle, Crown, ArrowRight,
   Calendar, TrendingUp, Shield, Loader2,
   IndianRupee, MessageSquare, X, Send, Bell, ChevronRight,
 } from 'lucide-react';

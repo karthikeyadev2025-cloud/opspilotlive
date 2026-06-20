@@ -1,4 +1,4 @@
-import { ArrowLeft, Activity, Users, Shield, Zap, Target, Award, TrendingUp, Building2, CheckCircle, ArrowRight, Mail, Phone } from 'lucide-react';
+import { ArrowLeft, Activity, Users, Shield, Zap, Target, TrendingUp, Building2, CheckCircle, ArrowRight, Mail } from 'lucide-react';
 
 function Logo() {
   return (
@@ -209,7 +209,7 @@ export default function AboutUs() {
           <div className="relative">
             <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-800" />
             <div className="space-y-8">
-              {MILESTONES.map((m, i) => (
+              {MILESTONES.map((m) => (
                 <div key={m.year} className="flex gap-6 relative">
                   <div className="flex-shrink-0 w-8 h-8 bg-slate-900 border-2 border-cyan-500/50 rounded-full flex items-center justify-center z-10 -ml-0">
                     <div className="w-2 h-2 bg-cyan-400 rounded-full" />

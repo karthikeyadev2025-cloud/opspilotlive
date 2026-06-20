@@ -1,24 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  LogOut, FileText, Briefcase, Image, MessageSquare, Home, Sun, Camera,
-  Users, Award, Settings, User, TrendingUp, UserCheck, LayoutDashboard,
-  Menu, X, Phone, Shield, HeartHandshake, ChevronDown, ChevronRight,
+  LogOut, Home,
+  Users, TrendingUp, UserCheck, LayoutDashboard,
+  Menu, X, Shield, HeartHandshake, ChevronDown, ChevronRight,
   Lock
 } from 'lucide-react';
 import DashboardOverview from './admin/DashboardOverview';
-import ContentEditor from './admin/ContentEditor';
-import ServicesManager from './admin/ServicesManager';
-import GalleryManager from './admin/GalleryManager';
-import TestimonialsManager from './admin/TestimonialsManager';
-import SolarManager from './admin/SolarManager';
-import CCTVManager from './admin/CCTVManager';
-import TechniciansManager from './admin/TechniciansManager';
-import BenefitsManager from './admin/BenefitsManager';
-import SettingsManager from './admin/SettingsManager';
-import MDManager from './admin/MDManager';
-import CareersManager from './admin/CareersManager';
-import InvestmentsManager from './admin/InvestmentsManager';
 import MarketingLeadsManager from './admin/MarketingLeadsManager';
 import UserManager from './admin/UserManager';
 import HRManager from './admin/HRManager';
@@ -63,24 +51,6 @@ const NAV_GROUPS: NavGroup[] = [
     defaultOpen: true,
     items: [
       { id: 'marketing', label: 'Marketing Leads', icon: UserCheck },
-      { id: 'investments', label: 'Investments', icon: TrendingUp },
-      { id: 'careers', label: 'Careers', icon: Briefcase },
-    ],
-  },
-  {
-    label: 'Website Content',
-    icon: FileText,
-    defaultOpen: false,
-    items: [
-      { id: 'content', label: 'Site Content', icon: FileText },
-      { id: 'md', label: 'MD Profile', icon: User },
-      { id: 'services', label: 'Services', icon: Briefcase },
-      { id: 'solar', label: 'Solar Details', icon: Sun },
-      { id: 'cctv', label: 'CCTV Details', icon: Camera },
-      { id: 'benefits', label: 'Benefits', icon: Award },
-      { id: 'gallery', label: 'Gallery', icon: Image },
-      { id: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-      { id: 'technicians', label: 'Technicians', icon: Phone },
     ],
   },
   {
@@ -89,7 +59,6 @@ const NAV_GROUPS: NavGroup[] = [
     defaultOpen: false,
     items: [
       { id: 'security', label: 'Security Logs', icon: Shield },
-      { id: 'settings', label: 'Settings', icon: Settings },
     ],
   },
 ];
@@ -270,24 +239,12 @@ export default function AdminDashboard() {
         <main className="flex-1 overflow-auto">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && <DashboardOverview />}
-            {activeTab === 'leads_analytics' && <div className="p-6"><LeadsDashboard isAdmin /></div>}
+            {activeTab === 'leads_analytics' && <div className="p-6"><LeadsDashboard /></div>}
             {activeTab === 'users' && <UserManager />}
             {activeTab === 'roles' && <RolePermissionsManager />}
             {activeTab === 'hr' && <HRManager />}
-            {activeTab === 'content' && <div className="p-6"><ContentEditor /></div>}
-            {activeTab === 'md' && <div className="p-6"><MDManager /></div>}
-            {activeTab === 'services' && <div className="p-6"><ServicesManager /></div>}
-            {activeTab === 'solar' && <div className="p-6"><SolarManager /></div>}
-            {activeTab === 'cctv' && <div className="p-6"><CCTVManager /></div>}
-            {activeTab === 'technicians' && <div className="p-6"><TechniciansManager /></div>}
-            {activeTab === 'benefits' && <div className="p-6"><BenefitsManager /></div>}
-            {activeTab === 'gallery' && <div className="p-6"><GalleryManager /></div>}
-            {activeTab === 'testimonials' && <div className="p-6"><TestimonialsManager /></div>}
-            {activeTab === 'careers' && <div className="p-6"><CareersManager /></div>}
-            {activeTab === 'investments' && <div className="p-6"><InvestmentsManager /></div>}
             {activeTab === 'marketing' && <MarketingLeadsManager />}
             {activeTab === 'security' && <div className="p-6"><SecurityLogs /></div>}
-            {activeTab === 'settings' && <div className="p-6"><SettingsManager /></div>}
           </div>
         </main>
       </div>

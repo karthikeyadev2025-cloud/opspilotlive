@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, Trash2, X, Download, Phone, MapPin, Search, MessageSquare, Calendar, RefreshCw, UserCheck, ChevronDown, Send, ChevronUp, Clock, FileText, AlertCircle, Tag, PhoneCall, Star, ArrowUpRight, Pencil, Save, BarChart2 } from 'lucide-react';
+import { Users, Trash2, X, Download, Phone, MapPin, Search, MessageSquare, Calendar, RefreshCw, UserCheck, ChevronDown, Send, ChevronUp, Clock, FileText, AlertCircle, Tag, PhoneCall, Star, Pencil, Save, BarChart2 } from 'lucide-react';
 
 interface MarketingLead {
   id: string;
@@ -87,12 +87,7 @@ function formatDateTime(val: string | null | undefined): string {
     + ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(val: string | null | undefined): string {
-  if (!val) return '—';
-  const d = new Date(val);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+
 
 function timeAgo(val: string | null | undefined): string {
   if (!val) return '';
@@ -217,14 +212,15 @@ export default function MarketingLeadsManager() {
     if (!newRemark.trim()) return;
     setSendingRemark(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: appUser } = await supabase.from('app_users').select('full_name, role').eq('id', user?.id).maybeSingle();
+    if (!user) { setSendingRemark(false); return; }
+    const { data: appUser } = await supabase.from('app_users').select('full_name, role').eq('id', user.id).maybeSingle();
     await supabase.from('lead_remarks').insert({
       lead_id: lead.id,
-      user_id: user?.id,
+      user_id: user.id,
       user_name: appUser?.full_name || 'Admin',
       user_role: appUser?.role || 'admin',
       remark: newRemark.trim(),
-      call_type: remarkCallType || null,
+      call_type: remarkCallType,
     });
     // Refresh remarks for this lead
     const { data: fresh } = await supabase.from('lead_remarks').select('*').eq('lead_id', lead.id).order('created_at', { ascending: true });
@@ -671,6 +667,9 @@ export default function MarketingLeadsManager() {
                           By: <span className="text-slate-400">{lead.collected_by}</span>
                         </div>
                         <div className="text-xs text-slate-500">
+                          Assigned: <span className={telecallerName ? 'text-slate-400' : 'text-orange-400'}>{telecallerName || 'Unassigned'}</span>
+                        </div>
+                        <div className="text-xs text-slate-500">
                           Added: <span className="text-slate-400">{formatDateTime(lead.created_at)}</span>
                         </div>
                         {lead.last_called_at && (
@@ -730,6 +729,15 @@ export default function MarketingLeadsManager() {
                     {/* Actions */}
                     <div className="flex flex-col gap-1.5 shrink-0">
                       <button
+                        onClick={() => updatePriority(lead.id, lead.priority === 'high' ? 'normal' : 'high')}
+                        className={`p-2 rounded-lg transition-colors ${
+                          lead.priority === 'high' ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-slate-400 hover:text-white'
+                        }`}
+                        title={lead.priority === 'high' ? 'Remove high priority' : 'Mark as high priority'}
+                      >
+                        <Star className={`w-4 h-4 ${lead.priority === 'high' ? 'fill-red-400' : ''}`} />
+                      </button>
+                      <button
                         onClick={() => toggleExpand(lead)}
                         className={`p-2 rounded-lg transition-colors text-xs flex items-center gap-1 ${
                           isExpanded ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400 hover:text-white'
@@ -740,7 +748,7 @@ export default function MarketingLeadsManager() {
                         {leadRemarks.length > 0 && <span>{leadRemarks.length}</span>}
                         {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                       </button>
-                      <button onClick={() => { isEditing ? setEditingLead(null) : openEdit(lead); }}
+                      <button onClick={() => { if (isEditing) { setEditingLead(null); } else { openEdit(lead); } }}
                         className={`p-2 rounded-lg transition-colors ${isEditing ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400 hover:text-white'}`}
                         title="Edit details">
                         <Pencil className="w-4 h-4" />
@@ -814,7 +822,7 @@ export default function MarketingLeadsManager() {
                           <p className="text-sm">No conversation yet — add the first remark below</p>
                         </div>
                       ) : leadRemarks.map((r, idx) => {
-                        const meta = CALL_TYPE_META[r.call_type] || CALL_TYPE_META.general;
+                        const meta = CALL_TYPE_META[r.call_type || 'general'] || CALL_TYPE_META.general;
                         return (
                           <div key={r.id} className="relative pl-7">
                             {idx < leadRemarks.length - 1 && <div className="absolute left-2.5 top-6 bottom-0 w-px bg-slate-700/60" />}

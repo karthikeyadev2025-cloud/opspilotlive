@@ -29,7 +29,7 @@ export function logLogin(params: {
     location_hint: locationHint,
     failure_reason: params.failureReason || '',
     session_id: params.sessionId || '',
-  }).then(() => {}).catch(() => {});
+  }).then(() => {}, () => {});
 }
 
 export function logLogout(params: {
@@ -48,7 +48,7 @@ export function logLogout(params: {
     user_agent: userAgent,
     device_info: deviceInfo,
     location_hint: locationHint,
-  }).then(() => {}).catch(() => {});
+  }).then(() => {}, () => {});
 }
 
 export function logAccountDisabled(params: {
@@ -68,7 +68,7 @@ export function logAccountDisabled(params: {
     device_info: deviceInfo,
     location_hint: locationHint,
     failure_reason: 'Account is disabled',
-  }).then(() => {}).catch(() => {});
+  }).then(() => {}, () => {});
 }
 
 export function logDataAccess(params: {
@@ -90,5 +90,5 @@ export function logDataAccess(params: {
     record_count: params.recordCount || 0,
     filters_applied: params.filtersApplied || '',
     notes: params.notes || '',
-  }).then(() => {}).catch(() => {});
+  }).then(() => {}, () => {});
 }

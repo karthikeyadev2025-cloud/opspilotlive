@@ -12,7 +12,7 @@ interface AppUser {
   email: string;
   full_name: string;
   role: string;
-  phone: string;
+  phone: string | null;
   is_active: boolean;
   created_at: string;
   profile_photo_url?: string | null;
@@ -186,7 +186,6 @@ export default function UserManager() {
     return BUILTIN_ROLE_CONFIG[role]?.icon || User;
   }
 
-  const allRoles = [...Object.keys(BUILTIN_ROLE_CONFIG), ...customRoles.map(r => r.role_name)];
   const filteredUsers = users.filter(u => {
     const q = search.toLowerCase();
     const matchSearch = !q || u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);

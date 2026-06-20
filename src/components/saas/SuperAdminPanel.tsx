@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Activity, LogOut, Users, Building2, CreditCard, TrendingUp, Clock, CheckCircle, AlertTriangle, Search, RefreshCw, Crown, XCircle, Ban, X, Loader2, Download, BarChart3, Shield, Settings, ChevronRight, IndianRupee, Package, TicketCheck, Pencil, Save, FileText, Inbox, Palette } from 'lucide-react';
+import { Activity, LogOut, Building2, CreditCard, TrendingUp, Clock, CheckCircle, Search, RefreshCw, XCircle, Ban, X, Loader2, Download, BarChart3, Shield, Settings, ChevronRight, IndianRupee, Package, TicketCheck, Pencil, Save, FileText, Inbox, Palette } from 'lucide-react';
 import ThemeManager from './ThemeManager';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

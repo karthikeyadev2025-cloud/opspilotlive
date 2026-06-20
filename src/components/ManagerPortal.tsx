@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, TrendingUp, Phone, Target, CheckCircle, Clock, AlertCircle, RefreshCw, LogOut, Search, X, Calendar, Briefcase, BarChart2, ArrowUpRight, MapPin, Zap, Star, Activity, UserCheck, PhoneCall, Download, Camera, MessageSquare, Send, Wallet, FileText, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Phone, Target, CheckCircle, AlertCircle, RefreshCw, LogOut, Search, X, Calendar, Briefcase, BarChart2, ArrowUpRight, MapPin, Zap, Star, Activity, UserCheck, PhoneCall, Download, Camera, MessageSquare, Send, Wallet, FileText, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import LeadsDashboard from './LeadsDashboard';
 import ProfileAvatar from './ProfileAvatar';
 
@@ -74,7 +74,8 @@ interface SalaryAdvance {
 
 interface LeaveRequest {
   id: string;
-  staff_id: string;
+  app_user_id: string;
+  requester_name?: string;
   leave_type: string;
   from_date: string;
   to_date: string;
@@ -83,7 +84,7 @@ interface LeaveRequest {
   status: string;
   remarks?: string;
   created_at: string;
-  staff?: { full_name: string };
+  app_user?: { full_name: string };
 }
 
 const STATUS_CONFIG = {
@@ -149,7 +150,7 @@ export default function ManagerPortal() {
         supabase.from('app_users').select('id, full_name, role, is_active').eq('is_active', true).in('role', ['telecaller', 'marketing_executive']),
         supabase.from('attendance_records').select('*, user:app_users(full_name, role)').order('attendance_date', { ascending: false }).limit(200),
         supabase.from('salary_advance_requests').select('*, user:app_users(full_name, role)').order('created_at', { ascending: false }).limit(100),
-        supabase.from('leave_requests').select('*, staff:staff_records(full_name)').order('created_at', { ascending: false }).limit(100),
+        supabase.from('leave_requests').select('*, app_user:app_users!app_user_id(full_name)').order('created_at', { ascending: false }).limit(100),
       ]);
       setLeads((leadsRes.data as Lead[]) || []);
       setStaff(staffRes.data || []);
@@ -686,11 +687,36 @@ function DashboardView({ stats, conversionRate, interestRate, requirementBreakdo
           </div>
         </div>
       </div>
+
+      {executivePerformance.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Briefcase className="w-5 h-5 text-amber-500" />
+            <h3 className="text-white font-semibold">Marketing Executive Performance</h3>
+          </div>
+          <div className="space-y-3">
+            {executivePerformance.sort((a, b) => b.submitted - a.submitted).map(ex => (
+              <div key={ex.id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
+                  {ex.full_name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{ex.full_name}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-amber-400 text-sm font-bold">{ex.submitted}</p>
+                  <p className="text-slate-500 text-xs">Leads Submitted</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function LeadsView({ leads, allLeads, search, setSearch, statusFilter, setStatusFilter, priorityFilter, setPriorityFilter, dateFrom, setDateFrom, dateTo, setDateTo, executiveFilter, setExecutiveFilter, executives, onRefresh, onExport, onSelect, staff, onAssign, assignLoading }: {
+function LeadsView({ leads, allLeads, search, setSearch, statusFilter, setStatusFilter, priorityFilter, setPriorityFilter, dateFrom, setDateFrom, dateTo, setDateTo, executiveFilter, setExecutiveFilter, executives, onRefresh, onExport, onSelect }: {
   leads: Lead[];
   allLeads: Lead[];
   search: string;
@@ -1289,11 +1315,11 @@ function LeavesView({ leaves, onRefresh }: { leaves: LeaveRequest[]; onRefresh: 
           <div key={l.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                {(l.staff as any)?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                {(l.app_user?.full_name || l.requester_name || '?').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-white font-semibold">{(l.staff as any)?.full_name || 'Unknown'}</p>
+                  <p className="text-white font-semibold">{l.app_user?.full_name || l.requester_name || 'Unknown'}</p>
                   <span className={`ml-auto text-xs px-2.5 py-0.5 rounded-full border font-medium ${LEAVE_STATUS_COLORS[l.status] || 'bg-slate-700 text-slate-400'}`}>
                     {l.status.charAt(0).toUpperCase() + l.status.slice(1)}
                   </span>

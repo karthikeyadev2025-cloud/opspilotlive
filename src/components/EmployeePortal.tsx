@@ -63,7 +63,8 @@ interface SalaryAdvance {
 
 interface LeaveRequest {
   id: string;
-  staff_id: string;
+  app_user_id: string;
+  requester_name?: string;
   leave_type: string;
   from_date: string;
   to_date: string;
@@ -124,7 +125,6 @@ export default function EmployeePortal() {
   const [payroll, setPayroll] = useState<PayrollRecord[]>([]);
   const [advances, setAdvances] = useState<SalaryAdvance[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
-  const [staffRecordId, setStaffRecordId] = useState<string | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
   const [todayLogs, setTodayLogs] = useState<any[]>([]);
@@ -140,10 +140,10 @@ export default function EmployeePortal() {
     const today = new Date().toISOString().slice(0, 10);
     const thisYear = new Date().getFullYear();
 
-    const [attRes, advRes, staffRes, leaveRes, balRes, notifRes, attLogRes] = await Promise.all([
+    const [attRes, advRes, payRes, leaveRes, balRes, notifRes, attLogRes] = await Promise.all([
       supabase.from('attendance_records').select('*').eq('staff_user_id', user.id).order('attendance_date', { ascending: false }).limit(30),
       supabase.from('salary_advance_requests').select('*').eq('app_user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('staff_records').select('id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('payroll_records').select('*').eq('app_user_id', user.id).order('year', { ascending: false }).order('month', { ascending: false }),
       supabase.from('leave_requests').select('*').eq('app_user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('leave_balances').select('*').eq('app_user_id', user.id).eq('year', thisYear).maybeSingle(),
       supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
@@ -159,23 +159,8 @@ export default function EmployeePortal() {
     setAdvances((advRes.data || []) as SalaryAdvance[]);
     setLeaveBalance(balRes.data as LeaveBalance | null);
     setNotifications((notifRes.data || []) as Notification[]);
-
-    const sid = staffRes.data?.id || null;
-    setStaffRecordId(sid);
-
-    const payRes = sid
-      ? await supabase.from('payroll_records').select('*').eq('staff_id', sid).order('year', { ascending: false }).order('month', { ascending: false })
-      : { data: [] };
     setPayroll((payRes.data || []) as PayrollRecord[]);
-
-    let allLeaves = (leaveRes.data || []) as LeaveRequest[];
-    if (sid) {
-      const { data: legacyLeaves } = await supabase.from('leave_requests').select('*').eq('staff_id', sid).order('created_at', { ascending: false });
-      const legacyIds = new Set(allLeaves.map(l => l.id));
-      const newLegacy = (legacyLeaves || []).filter((l: any) => !legacyIds.has(l.id));
-      allLeaves = [...allLeaves, ...newLegacy].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    }
-    setLeaves(allLeaves);
+    setLeaves((leaveRes.data || []) as LeaveRequest[]);
     } finally {
       setLoading(false);
     }
@@ -291,7 +276,7 @@ export default function EmployeePortal() {
             {activeTab === 'attendance' && <AttendanceTab user={user} attendance={attendance} attendanceLogs={attendanceLogs} todayRecord={todayRecord} todayLogs={todayLogs} onRefresh={loadData} />}
             {activeTab === 'payslip' && <PayslipTab payroll={payroll} />}
             {activeTab === 'advance' && <AdvanceTab user={user} advances={advances} onRefresh={loadData} />}
-            {activeTab === 'leave' && <LeaveTab staffRecordId={staffRecordId} leaves={leaves} leaveBalance={leaveBalance} onRefresh={loadData} />}
+            {activeTab === 'leave' && <LeaveTab leaves={leaves} leaveBalance={leaveBalance} onRefresh={loadData} />}
             {activeTab === 'profile' && <ProfileTab />}
           </>
         )}
@@ -652,7 +637,7 @@ function AttendanceTab({ user, attendance, attendanceLogs, todayRecord, todayLog
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     {a.check_in_time && <span>In: {new Date(a.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
                     {a.check_out_time && <span>Out: {new Date(a.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
-                    {a.work_hours > 0 && <span className="text-teal-500">{Number(a.work_hours).toFixed(1)}h</span>}
+                    {(a.work_hours ?? 0) > 0 && <span className="text-teal-500">{Number(a.work_hours).toFixed(1)}h</span>}
                     {dayLogs.length > 0 && <span className="text-amber-500">{dayLogs.length} punches</span>}
                   </div>
                 </div>
@@ -827,8 +812,8 @@ const LEAVE_STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
 };
 
-function LeaveTab({ staffRecordId, leaves, leaveBalance, onRefresh }: {
-  staffRecordId: string | null; leaves: LeaveRequest[]; leaveBalance: LeaveBalance | null; onRefresh: () => void;
+function LeaveTab({ leaves, leaveBalance, onRefresh }: {
+  leaves: LeaveRequest[]; leaveBalance: LeaveBalance | null; onRefresh: () => void;
 }) {
   const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
@@ -851,7 +836,6 @@ function LeaveTab({ staffRecordId, leaves, leaveBalance, onRefresh }: {
     setSaving(true); setError('');
     const { error: e } = await supabase.from('leave_requests').insert({
       app_user_id: user?.id,
-      staff_id: staffRecordId || null,
       requester_name: user?.full_name,
       leave_type: form.leave_type,
       from_date: form.from_date,
@@ -868,8 +852,9 @@ function LeaveTab({ staffRecordId, leaves, leaveBalance, onRefresh }: {
   }
 
   async function cancelLeave(id: string) {
+    if (!user?.id) return;
     setCancelling(id);
-    await supabase.from('leave_requests').delete().eq('id', id).eq('status', 'pending');
+    await supabase.from('leave_requests').delete().eq('id', id).eq('app_user_id', user.id).eq('status', 'pending');
     setCancelling(null);
     onRefresh();
   }
