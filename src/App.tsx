@@ -5,7 +5,7 @@ import SEOHead from './components/SEOHead';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import { useTheme } from './hooks/useTheme';
 
-// Aadya internal portals
+// Staff portal (role-based, used by every tenant's team members)
 const UnifiedLogin = lazy(() => import('./components/UnifiedLogin'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const ExecutivePortal = lazy(() => import('./components/ExecutivePortal'));
@@ -43,8 +43,8 @@ type Route =
   | 'privacy'
   | 'terms'
   | 'about'
-  | 'aadya-login'
-  | 'aadya-portal';
+  | 'staff-login'
+  | 'staff-portal';
 
 function getRoute(): Route {
   const hash = window.location.hash.replace('#', '');
@@ -58,12 +58,12 @@ function getRoute(): Route {
   if (hash === 'terms') return 'terms';
   if (hash === 'about') return 'about';
 
-  // Aadya internal routes (preserved from original)
-  if (path === '/login' || hash === 'login') return 'aadya-login';
-  if (path === '/admin' || hash === 'admin') return 'aadya-portal';
-  if (path === '/portal' || hash === 'portal') return 'aadya-portal';
-  if (path === '/employee' || hash === 'employee') return 'aadya-portal';
-  if (path === '/myportal' || hash === 'myportal') return 'aadya-portal';
+  // Staff portal routes (role-based, used by every tenant's team)
+  if (path === '/login' || hash === 'login') return 'staff-login';
+  if (path === '/admin' || hash === 'admin') return 'staff-portal';
+  if (path === '/portal' || hash === 'portal') return 'staff-portal';
+  if (path === '/employee' || hash === 'employee') return 'staff-portal';
+  if (path === '/myportal' || hash === 'myportal') return 'staff-portal';
 
   return 'saas-landing';
 }
@@ -170,8 +170,8 @@ function AppContent() {
     return <Suspense fallback={<PageLoader />}><TenantDashboard /></Suspense>;
   }
 
-  // ── Aadya internal routes ────────────────────────────────────────
-  if (route === 'aadya-login' || route === 'aadya-portal') {
+  // ── Staff portal routes (role-based, every tenant's team) ─────────
+  if (route === 'staff-login' || route === 'staff-portal') {
     if (!user) return <Suspense fallback={<PageLoader />}><UnifiedLogin /></Suspense>;
     if (user.role === 'admin') return <Suspense fallback={<PageLoader />}><AdminDashboard /></Suspense>;
     if (user.role === 'marketing_executive') return <Suspense fallback={<PageLoader />}><ExecutivePortal /></Suspense>;

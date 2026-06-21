@@ -24,6 +24,15 @@ interface Plan {
   features: string[]; is_active: boolean;
 }
 
+interface TeamStats {
+  totalStaff: number;
+  activeStaff: number;
+  byRole: Record<string, number>;
+  presentToday: number;
+  pendingLeads: number;
+  pendingLeaves: number;
+}
+
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 select-none">
@@ -174,6 +183,7 @@ const TABS = ['overview', 'subscription', 'team'] as const;
 export default function TenantDashboard() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'overview' | 'subscription' | 'team'>('overview');
   const [payLoading, setPayLoading] = useState<string | null>(null);
@@ -193,6 +203,28 @@ export default function TenantDashboard() {
       ]);
       setTenant(tr.data as Tenant | null);
       setPlans((pr.data || []) as Plan[]);
+
+      const tenantId = (tr.data as Tenant | null)?.id;
+      if (tenantId) {
+        const today = new Date().toISOString().slice(0, 10);
+        const [staffRes, attRes, leadsRes, leavesRes] = await Promise.all([
+          supabase.from('app_users').select('role, is_active').eq('tenant_id', tenantId),
+          supabase.from('attendance_records').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('attendance_date', today).eq('status', 'present'),
+          supabase.from('marketing_leads').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'new'),
+          supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending'),
+        ]);
+        const staff = staffRes.data || [];
+        const byRole: Record<string, number> = {};
+        staff.forEach(s => { byRole[s.role] = (byRole[s.role] || 0) + 1; });
+        setTeamStats({
+          totalStaff: staff.length,
+          activeStaff: staff.filter(s => s.is_active).length,
+          byRole,
+          presentToday: attRes.count || 0,
+          pendingLeads: leadsRes.count || 0,
+          pendingLeaves: leavesRes.count || 0,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -459,21 +491,74 @@ export default function TenantDashboard() {
 
         {/* TEAM */}
         {tab === 'team' && (
-          <div className="max-w-xl">
-            <div className="card p-8 text-center">
-              <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <Users className="w-7 h-7 text-primary-600" />
+          <div className="max-w-4xl space-y-6">
+            {teamStats && teamStats.totalStaff > 0 ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Staff', value: teamStats.totalStaff, icon: Users, color: 'text-primary-600 bg-primary-50' },
+                    { label: 'Active', value: teamStats.activeStaff, icon: CheckCircle, color: 'text-green-600 bg-green-50' },
+                    { label: 'Present Today', value: teamStats.presentToday, icon: Clock, color: 'text-blue-600 bg-blue-50' },
+                    { label: 'New Leads', value: teamStats.pendingLeads, icon: TrendingUp, color: 'text-amber-600 bg-amber-50' },
+                  ].map(s => (
+                    <div key={s.label} className="card p-5">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
+                        <s.icon className="w-5 h-5" />
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {teamStats.pendingLeaves > 0 && (
+                  <div className="card p-5 flex items-center gap-3 border-amber-200 bg-amber-50/50">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                    <p className="text-amber-800 text-sm font-medium">
+                      {teamStats.pendingLeaves} leave request{teamStats.pendingLeaves > 1 ? 's' : ''} awaiting your approval
+                    </p>
+                  </div>
+                )}
+
+                <div className="card p-6">
+                  <h3 className="font-bold text-gray-900 text-sm mb-4">Team by Role</h3>
+                  <div className="space-y-3">
+                    {Object.entries(teamStats.byRole).map(([role, count]) => (
+                      <div key={role} className="flex items-center gap-3">
+                        <span className="text-gray-600 text-sm capitalize w-32 shrink-0">{role.replace(/_/g, ' ')}</span>
+                        <div className="flex-1 bg-gray-100 rounded-full h-2">
+                          <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${(count / teamStats.totalStaff) * 100}%` }} />
+                        </div>
+                        <span className="text-gray-900 text-sm font-semibold w-6 text-right">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={goToApp}
+                  className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm"
+                  style={{ boxShadow: '0 4px 16px rgba(37,99,235,0.30)' }}>
+                  Open Admin Panel <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <div className="max-w-xl">
+                <div className="card p-8 text-center">
+                  <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                    <Users className="w-7 h-7 text-primary-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg mb-2">Add Your First Team Member</h3>
+                  <p className="text-gray-500 text-sm mb-7 leading-relaxed">
+                    Add staff, assign roles (Telecaller, Field Executive, Manager, HR, Employee), and manage permissions from the admin panel inside the app.
+                  </p>
+                  <button onClick={goToApp}
+                    className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm"
+                    style={{ boxShadow: '0 4px 16px rgba(37,99,235,0.30)' }}>
+                    Open Admin Panel <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <h3 className="font-bold text-gray-900 text-lg mb-2">Manage Your Team Inside the App</h3>
-              <p className="text-gray-500 text-sm mb-7 leading-relaxed">
-                Add staff, assign roles (Telecaller, Field Executive, Manager, HR, Employee), and manage permissions from the admin panel inside the app.
-              </p>
-              <button onClick={goToApp}
-                className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm"
-                style={{ boxShadow: '0 4px 16px rgba(37,99,235,0.30)' }}>
-                Open Admin Panel <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+            )}
           </div>
         )}
       </div>

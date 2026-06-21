@@ -66,7 +66,7 @@ export default function UnifiedLogin() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-600 rounded-2xl mb-5" style={{ boxShadow: '0 4px 20px rgba(37,99,235,0.40)' }}>
             <Activity className="w-7 h-7 text-white" strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-black text-white mb-1 tracking-tight">Aadya Enterprises</h1>
+          <h1 className="text-2xl font-black text-white mb-1 tracking-tight">OpsPilot</h1>
           <p className="text-white/50 text-sm">Staff Portal — Sign in to continue</p>
         </div>
 
