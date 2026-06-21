@@ -45,10 +45,19 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Unregister any previously-installed service worker and clear its
+      // caches. The old sw.js (cache key 'aadya-v1', leftover from before
+      // this was OpsPilot) could serve a stale cached build indefinitely
+      // across deploys, since its cache key was never bumped. There is no
+      // offline/PWA requirement here that needs a service worker, so this
+      // actively removes it rather than registering a new one.
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(reg => reg.unregister());
         });
+      }
+      if ('caches' in window) {
+        caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
       }
     </script>
   </body>
