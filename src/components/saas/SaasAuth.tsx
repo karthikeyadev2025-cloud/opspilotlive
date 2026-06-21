@@ -60,11 +60,40 @@ export default function SaasAuth({ mode: initialMode }: { mode: 'login' | 'signu
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
       if (authError) throw new Error(authError.message);
-      const { data: sa } = await supabase.from('super_admins').select('id, is_active').eq('id', data.user!.id).maybeSingle();
+      const userId = data.user!.id;
+
+      const { data: sa } = await supabase.from('super_admins').select('id, is_active').eq('id', userId).maybeSingle();
       if (sa?.is_active) { window.location.hash = '#super-admin'; window.dispatchEvent(new HashChangeEvent('hashchange')); return; }
-      const { data: tenant } = await supabase.from('tenants').select('id').eq('auth_user_id', data.user!.id).maybeSingle();
+
+      let { data: tenant } = await supabase.from('tenants').select('id').eq('auth_user_id', userId).maybeSingle();
+
+      // If email confirmation is required, signUp() returns no session, so
+      // the tenant row never got created at signup time (see handleSignup).
+      // Finish that setup now, on first successful login, using the
+      // signup details we stashed locally before redirecting to confirm.
+      if (!tenant) {
+        const pendingRaw = localStorage.getItem(`opspilot_pending_signup_${loginEmail.toLowerCase()}`);
+        if (pendingRaw) {
+          const pending = JSON.parse(pendingRaw);
+          const { data: plans } = await supabase.from('saas_plans').select('id, slug').eq('slug', pending.plan).maybeSingle();
+          const slug = generateSlug(pending.companyName);
+          const { error: tenantError } = await supabase.from('tenants').insert({
+            company_name: pending.companyName, company_email: pending.ownerEmail, company_phone: pending.ownerPhone,
+            industry: pending.industry, owner_name: pending.ownerName, owner_email: pending.ownerEmail,
+            owner_phone: pending.ownerPhone, slug, status: 'trial', plan_id: plans?.id || null,
+            auth_user_id: userId,
+            trial_ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          });
+          if (!tenantError) {
+            localStorage.removeItem(`opspilot_pending_signup_${loginEmail.toLowerCase()}`);
+            const retry = await supabase.from('tenants').select('id').eq('auth_user_id', userId).maybeSingle();
+            tenant = retry.data;
+          }
+        }
+      }
+
       if (tenant) { window.location.hash = '#tenant-dashboard'; window.dispatchEvent(new HashChangeEvent('hashchange')); }
-      else { setError('No account found. Please sign up first.'); await supabase.auth.signOut(); }
+      else { setError('No account found for this email. Please sign up first.'); await supabase.auth.signOut(); }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally { setLoading(false); }
@@ -82,6 +111,18 @@ export default function SaasAuth({ mode: initialMode }: { mode: 'login' | 'signu
       if (authError) throw new Error(authError.message);
       if (!authData.user) throw new Error('Signup failed. Please try again.');
       if (!authData.session) {
+        // Email confirmation is required: there's no session yet, so we
+        // can't insert the tenants row now (RLS requires auth.uid() to
+        // match auth_user_id, and we're not authenticated as this user
+        // until they confirm and log in). Stash the form details locally
+        // and finish tenant creation on their first successful login.
+        localStorage.setItem(
+          `opspilot_pending_signup_${form.ownerEmail.toLowerCase()}`,
+          JSON.stringify({
+            companyName: form.companyName, ownerName: form.ownerName, ownerEmail: form.ownerEmail,
+            ownerPhone: form.ownerPhone, industry: form.industry, plan: form.plan,
+          })
+        );
         setSuccess('Check your email to confirm your account, then sign in.');
         setLoading(false);
         return;
